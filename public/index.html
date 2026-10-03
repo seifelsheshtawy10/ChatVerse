@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatVerse - Temporary Friend Chat</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --chat-user: #4f46e5;
+            --chat-peer: #334155;
+            --border-color: #334155;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-primary); color: var(--text-main); height: 100vh; display: flex; align-items: center; justify-content: center; }
+
+        /* Auth Screen */
+        .modal-card {
+            background-color: var(--bg-secondary);
+            padding: 32px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .modal-card h2 { margin-bottom: 8px; color: var(--text-main); }
+        .modal-card p { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+
+        .form-group { margin-bottom: 16px; text-align: left; }
+        .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-tertiary);
+            color: var(--text-main);
+            outline: none;
+            font-size: 14px;
+        }
+
+        .btn-group { display: flex; gap: 12px; margin-top: 16px; }
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--accent);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn:hover { background-color: var(--accent-hover); }
+        .btn-secondary { background-color: var(--bg-tertiary); }
+        .btn-secondary:hover { background-color: #475569; }
+
+        /* Chat Layout */
+        .chat-app {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 300px;
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .room-info-card {
+            background-color: var(--bg-tertiary);
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .room-code-display {
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 3px;
+            color: var(--accent);
+            margin: 8px 0;
+            user-select: all;
+        }
+
+        .user-list h4 { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; }
+        .user-item { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 8px; }
+        .dot { width: 8px; height: 8px; background-color: #22c55e; border-radius: 50%; }
+
+        .chat-main { flex: 1; display: flex; flex-direction: column; background-color: var(--bg-primary); }
+        .chat-header { padding: 20px; border-bottom: 1px solid var(--border-color); background-color: var(--bg-secondary); }
+        
+        .messages-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        
+        .msg { max-width: 60%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.4; }
+        .msg.sent { align-self: flex-end; background-color: var(--chat-user); color: white; border-bottom-right-radius: 2px; }
+        .msg.received { align-self: flex-start; background-color: var(--chat-peer); color: white; border-bottom-left-radius: 2px; }
+        .msg .sender-name { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; display: block; }
+        .msg .msg-time { font-size: 10px; opacity: 0.7; text-align: right; margin-top: 4px; }
+        
+        .system-msg { align-self: center; font-size: 12px; color: var(--text-muted); background: var(--bg-tertiary); padding: 4px 12px; border-radius: 12px; }
+
+        .input-bar { padding: 16px; background-color: var(--bg-secondary); border-top: 1px solid var(--border-color); }
+        .input-bar form { display: flex; gap: 12px; }
+        .input-bar input { flex: 1; padding: 12px; border-radius: 24px; border: 1px solid var(--border-color); background-color: var(--bg-tertiary); color: white; outline: none; }
+        .input-bar button { width: 44px; height: 44px; border-radius: 50%; border: none; background-color: var(--accent); color: white; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <!-- Auth View -->
+    <div class="modal-card" id="authScreen">
+        <h2>Join ChatVerse</h2>
+        <p>Enter your username to host or join a temporary group chat.</p>
+
+        <div class="form-group">
+            <label>YOUR USERNAME</label>
+            <input type="text" id="usernameInput" placeholder="e.g. Alex" required>
+        </div>
+
+        <div class="form-group" id="codeGroup" style="display: none;">
+            <label>ROOM CODE</label>
+            <input type="text" id="roomCodeInput" placeholder="e.g. A1B2C3" style="text-transform: uppercase;">
+        </div>
+
+        <p id="errorText" style="color: #ef4444; font-size: 12px; margin-bottom: 12px; display: none;"></p>
+
+        <div class="btn-group" id="mainActions">
+            <button class="btn" onclick="showJoinMode()">Join Group</button>
+            <button class="btn btn-secondary" onclick="hostRoom()">Host Group</button>
+        </div>
+
+        <div class="btn-group" id="joinActions" style="display: none;">
+            <button class="btn" onclick="joinRoom()">Enter Chat</button>
+            <button class="btn btn-secondary" onclick="resetAuthView()">Back</button>
+        </div>
+    </div>
+
+    <!-- Chat App View -->
+    <div class="chat-app" id="chatApp">
+        <aside class="sidebar">
+            <div class="room-info-card">
+                <span style="font-size: 12px; color: var(--text-muted);">ROOM CODE</span>
+                <div class="room-code-display" id="displayRoomCode">------</div>
+                <span style="font-size: 11px; color: var(--text-muted);">Share this code with your friends</span>
+            </div>
+
+            <div class="user-list">
+                <h4>ACTIVE MEMBERS</h4>
+                <div id="membersList"></div>
+            </div>
+        </aside>
+
+        <main class="chat-main">
+            <header class="chat-header">
+                <h3>One-Time Group Chat</h3>
+            </header>
+
+            <div class="messages-area" id="messagesArea"></div>
+
+            <div class="input-bar">
+                <form id="messageForm">
+                    <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off" required>
+                    <button type="submit"><i class="fa-solid fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
